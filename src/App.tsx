@@ -5,7 +5,6 @@ import { ParticipantList } from './components/ParticipantList';
 import type { Participant, ParticipantProgress } from './types';
 import { CloudLightning } from 'lucide-react';
 
-// Updated mock data with real participants
 const mockParticipants: Participant[] = [
   { 
     id: '1', 
@@ -21,7 +20,7 @@ const mockParticipants: Participant[] = [
   },
   {
     id: '3',
-    name: 'Eirik Berntsen (gamle)',
+    name: 'Eirik Berntsen (old)',
     fileUrl: 'https://steirik.blob.core.windows.net/container-eirik/interne_hr_data.json',
     status: 'pending'
   }
@@ -34,44 +33,45 @@ export default function App() {
 
   useEffect(() => {
     const checkUrls = async () => {
-      // Check all pending participants in parallel
       const pendingParticipants = participants.filter(p => p.status === 'pending');
       if (pendingParticipants.length === 0) return;
-
+  
       const updatedParticipants = [...participants];
-
-      // Process all participants in parallel
+  
       await Promise.all(pendingParticipants.map(async (participant) => {
         const participantIndex = participants.findIndex(p => p.id === participant.id);
         
         console.log(`[${new Date().toISOString()}] Checking URL for ${participant.name}:`, participant.fileUrl);
-
+  
         try {
           const response = await fetch(participant.fileUrl, {
             method: 'HEAD',
-            mode: 'no-cors',
             cache: 'no-cache',
             headers: {
               'Accept': '*/*'
             }
           });
-          
-          console.log(`[${new Date().toISOString()}] Response for ${participant.name}:`, {
+  
+          const responseDetails = {
             status: response.status,
             statusText: response.statusText,
             ok: response.ok,
-            type: response.type
-          });
-
-          if (response.type === 'opaque') {
-            console.log(`[${new Date().toISOString()}] ${participant.name} has not completed the task yet (file exists)`);
-          } else {
-            console.log(`[${new Date().toISOString()}] ${participant.name} has completed the task (file not accessible)`);
+            url: response.url
+          };
+  
+          console.log(`[${new Date().toISOString()}] Response for ${participant.name}:`, responseDetails);
+  
+          if (response.status === 200) {
+            console.log(`[${new Date().toISOString()}] ${participant.name} has not completed the task yet (file still exists)`);
+          } else if (response.status === 404) {
+            console.log(`[${new Date().toISOString()}] ${participant.name} has completed the task (file deleted)`);
             updatedParticipants[participantIndex] = {
               ...participant,
               status: 'completed',
               completedAt: new Date(),
             };
+          } else {
+            console.log(`[${new Date().toISOString()}] ${participant.name}'s task status could not be determined (status code: ${response.status})`);
           }
         } catch (error) {
           console.log(`[${new Date().toISOString()}] Error checking URL for ${participant.name}:`, {
@@ -81,18 +81,13 @@ export default function App() {
             stack: error.stack
           });
           
-          console.log(`[${new Date().toISOString()}] ${participant.name} has completed the task (file not accessible)`);
-          updatedParticipants[participantIndex] = {
-            ...participant,
-            status: 'completed',
-            completedAt: new Date(),
-          };
+          console.log(`[${new Date().toISOString()}] ${participant.name}'s task status could not be determined (network error)`);
         }
       }));
-
+  
       setParticipants(updatedParticipants);
     };
-
+  
     const interval = setInterval(checkUrls, 5000);
     return () => clearInterval(interval);
   }, [participants]);
@@ -101,7 +96,6 @@ export default function App() {
 
   return (
     <div className="min-h-screen relative overflow-hidden bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900">
-      {/* Animated background elements */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_120%,rgba(120,119,198,0.3),rgba(255,0,0,0))]" />
         <motion.div
@@ -121,7 +115,6 @@ export default function App() {
         />
       </div>
 
-      {/* Content */}
       <div className="container mx-auto px-4 py-8 relative z-10">
         <motion.div
           initial={{ y: -20, opacity: 0 }}
