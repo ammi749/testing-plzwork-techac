@@ -5,21 +5,26 @@ import { ParticipantList } from './components/ParticipantList';
 import type { Participant, ParticipantProgress } from './types';
 import { CloudLightning } from 'lucide-react';
 
-// Simulated data - replace with actual API calls
+// Updated mock data with real participants
 const mockParticipants: Participant[] = [
-  { id: '1', name: 'hello Doe', fileUrl: 'https://example.com/1', status: 'pending' },
-  { id: '2', name: 'Jane Smith', fileUrl: 'https://example.com/2', status: 'pending' },
-  { id: '3', name: 'Alice Johnson', fileUrl: 'https://example.com/3', status: 'pending' },
-  { id: '4', name: 'Michael Brown', fileUrl: 'https://example.com/4', status: 'pending' },
-  { id: '5', name: 'Emma Wilson', fileUrl: 'https://example.com/5', status: 'pending' },
-  { id: '6', name: 'James Taylor', fileUrl: 'https://example.com/6', status: 'pending' },
-  { id: '7', name: 'Olivia Davis', fileUrl: 'https://example.com/7', status: 'pending' },
-  { id: '8', name: 'William Martinez', fileUrl: 'https://example.com/8', status: 'pending' },
-  { id: '9', name: 'Sophia Anderson', fileUrl: 'https://example.com/9', status: 'pending' },
-  { id: '10', name: 'Lucas Garcia', fileUrl: 'https://example.com/10', status: 'pending' },
-  { id: '11', name: 'Isabella Moore', fileUrl: 'https://example.com/11', status: 'pending' },
-  { id: '12', name: 'Mason Lee', fileUrl: 'https://example.com/12', status: 'pending' },
-  { id: '13', name: 'Charlotte Clark', fileUrl: 'https://example.com/13', status: 'pending' }
+  { 
+    id: '1', 
+    name: 'Vebjorn Risa', 
+    fileUrl: 'https://sttademovebjornr.blob.core.windows.net/sensitive-files-vebjornr/interne_hr_data.json', 
+    status: 'pending' 
+  },
+  { 
+    id: '2', 
+    name: 'Asif Amin', 
+    fileUrl: 'https://sttademoasifa.blob.core.windows.net/sensitive-files-asifa/interne_hr_data.json', 
+    status: 'pending' 
+  },
+  {
+    id: '3',
+    name: 'Eirik Berntsen (gamle)',
+    fileUrl: 'https://steirik.blob.core.windows.net/container-eirik/interne_hr_data.json',
+    status: 'pending'
+  }
 ];
 
 export default function App() {
@@ -29,37 +34,68 @@ export default function App() {
 
   useEffect(() => {
     const checkUrls = async () => {
+      // Check all pending participants in parallel
       const pendingParticipants = participants.filter(p => p.status === 'pending');
       if (pendingParticipants.length === 0) return;
 
-      // Find the next participant to complete
-      const nextParticipantIndex = participants.findIndex(
-        (p, index) => p.status === 'pending' && index > lastCompletedIndex
-      );
-
-      if (nextParticipantIndex === -1) return; // No more participants to process
-
       const updatedParticipants = [...participants];
-      const participant = updatedParticipants[nextParticipantIndex];
 
-      // Simulate completion with 70% probability
-      const shouldComplete = Math.random() > 0.3;
+      // Process all participants in parallel
+      await Promise.all(pendingParticipants.map(async (participant) => {
+        const participantIndex = participants.findIndex(p => p.id === participant.id);
+        
+        console.log(`[${new Date().toISOString()}] Checking URL for ${participant.name}:`, participant.fileUrl);
 
-      if (shouldComplete) {
-        updatedParticipants[nextParticipantIndex] = {
-          ...participant,
-          status: 'completed',
-          completedAt: new Date(),
-        };
-        setLastCompletedIndex(nextParticipantIndex);
-      }
+        try {
+          const response = await fetch(participant.fileUrl, {
+            method: 'HEAD',
+            mode: 'no-cors',
+            cache: 'no-cache',
+            headers: {
+              'Accept': '*/*'
+            }
+          });
+          
+          console.log(`[${new Date().toISOString()}] Response for ${participant.name}:`, {
+            status: response.status,
+            statusText: response.statusText,
+            ok: response.ok,
+            type: response.type
+          });
+
+          if (response.type === 'opaque') {
+            console.log(`[${new Date().toISOString()}] ${participant.name} has not completed the task yet (file exists)`);
+          } else {
+            console.log(`[${new Date().toISOString()}] ${participant.name} has completed the task (file not accessible)`);
+            updatedParticipants[participantIndex] = {
+              ...participant,
+              status: 'completed',
+              completedAt: new Date(),
+            };
+          }
+        } catch (error) {
+          console.log(`[${new Date().toISOString()}] Error checking URL for ${participant.name}:`, {
+            error,
+            message: error.message,
+            name: error.name,
+            stack: error.stack
+          });
+          
+          console.log(`[${new Date().toISOString()}] ${participant.name} has completed the task (file not accessible)`);
+          updatedParticipants[participantIndex] = {
+            ...participant,
+            status: 'completed',
+            completedAt: new Date(),
+          };
+        }
+      }));
 
       setParticipants(updatedParticipants);
     };
 
     const interval = setInterval(checkUrls, 5000);
     return () => clearInterval(interval);
-  }, [participants, lastCompletedIndex]);
+  }, [participants]);
 
   const completedCount = participants.filter((p) => p.status === 'completed').length;
 
