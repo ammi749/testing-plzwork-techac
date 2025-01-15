@@ -4,27 +4,7 @@ import { StatusCard } from './components/StatusCard';
 import { ParticipantList } from './components/ParticipantList';
 import type { Participant, ParticipantProgress } from './types';
 import { CloudLightning } from 'lucide-react';
-
-const mockParticipants: Participant[] = [
-  { 
-    id: '1', 
-    name: 'Vebjorn Risa', 
-    fileUrl: 'https://sttademovebjornr.blob.core.windows.net/sensitive-files-vebjornr/interne_hr_data.json', 
-    status: 'pending' 
-  },
-  { 
-    id: '2', 
-    name: 'Asif Amin', 
-    fileUrl: 'https://sttademoasifa.blob.core.windows.net/sensitive-files-asifa/interne_hr_data.json', 
-    status: 'pending' 
-  },
-  {
-    id: '3',
-    name: 'Eirik Berntsen (old)',
-    fileUrl: 'https://steirik.blob.core.windows.net/container-eirik/interne_hr_data.json',
-    status: 'pending'
-  }
-];
+import { participants as mockParticipants } from './config/participants';
 
 export default function App() {
   const [participants, setParticipants] = useState<Participant[]>(mockParticipants);
